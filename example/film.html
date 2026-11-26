@@ -1,0 +1,49 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Example: Tempo feature film (4:5, phone right, rows left)</title>
+<!-- The kit's worked example. Tempo is a made-up app (example/app), captured with tools/capture.cjs at 4x.
+     Three beats, one take: week view (line callout, no zoom), quick add (tap, gentle zoom, callout), focus mode (tap, close zoom, callout).
+     Everything is a function of the frame: window.seek(F). ?brand=<name> swaps the brand, ?frame=16:9 the frame, ?zoom=0 turns the zooms off. -->
+<link rel="stylesheet" href="../kit/film.css">
+<div id="stage"></div>
+<script>document.write(`<script src="../brands/${new URLSearchParams(location.search).get('brand') || 'neutral'}/brand.js"><\/script>`);</script>
+<script src="img/rects.js"></script>
+<script src="../kit/film.js"></script>
+<script>
+const K = Film({ frame: '4:5' }), R = n => window.RECTS[n].rects, { prog, lerp, house } = K;
+const wide = K.FRAME === '16:9';
+
+/* beats: every frame number of the film lives here */
+const T = { week: 20, weekCo: [44, 128],
+            tapFab: 142, add: 150, addZoom: 158, addCo: [180, 262],
+            tapAdd: 276, focus: 284, focusZoom: 292, focusCo: [330, 392],
+            end: 450 };
+
+/* layout on the 12-column grid: phone on the right half, rows on the left under the header */
+const PH = wide ? 960 : 950, phone = K.device('phone', { h: PH, x: wide ? K.col(7) : K.col(6), y: wide ? 60 : 290 });
+const shot = n => phone.layer(`img/${n}.png`, { hidden: n !== 'week' });
+const L = { week: shot('week'), add: shot('add'), focus: shot('focus') };
+const c = (n, k) => { const r = R(n)[k]; return phone.point(r.x + r.w / 2, r.y + r.h / 2); };      // centre of a captured element, in world px
+const edge = (n, k, side = 'left') => { const r = R(n)[k]; return phone.point(side === 'left' ? r.x : r.x + r.w, r.y + r.h / 2); };
+
+const up = [
+  K.header({ over: [[T.week, 'Tempo']], heads: [[T.week, 'The week, at a glance'], [T.add, 'Add a task in one go'], [T.focus, 'Then focus']], end: T.end - 30 }),
+  K.rows([[T.week, 'Week view'], [T.add, 'Quick add'], [T.focus, 'Focus mode']], { x: K.M, y: wide ? 820 : 1080, w: K.span(0, 3), size: 28, at: 10, end: T.end - 30 }),
+  K.callout({ at: T.weekCo[0], end: T.weekCo[1], dev: phone, feature: R('week').today, layer: L.week, text: 'Today stays in view', sub: 'Seven days in one row' }),
+  K.tap(T.tapFab, c('week', 'fab')),
+  K.callout({ at: T.addCo[0], end: T.addCo[1], dev: phone, feature: R('add').field, layer: L.add, text: 'Type it, pick a day', sub: 'Time and length are one tap' }),
+  K.tap(T.tapAdd, c('add', 'add')),
+  K.callout({ at: T.focusCo[0], end: T.focusCo[1], dev: phone, feature: R('focus').ring, layer: L.focus, text: 'One task, one timer', sub: 'Everything else waits' }),
+];
+K.zoom(T.addZoom, 'gentle', { target: phone.rect(R('add').field), hold: 96 });
+const ring = R('focus').ring; K.zoom(T.focusZoom, 'close', { target: phone.rect({ x: ring.x - 20, y: ring.y - 20, w: ring.w + 40, h: ring.h + 40 }), z: 1.6, focus: wide ? { x: 1500, y: 560 } : { x: 860, y: 700 }, hold: 110 });
+/* a close zoom must leave the header, the rows and the label column on the ground: the device's left edge here lands at about x 500 */
+
+K.go(T.end, F => {
+  /* screens: the add sheet rises over the week; focus mode dissolves in */
+  const a = house(F - T.add, 0.82), f = prog(F, T.focus, T.focus + 14);
+  L.add.style.opacity = prog(F, T.add, T.add + 6); L.add.style.transform = `translateY(${36 * (1 - a)}px)`;
+  L.week.style.opacity = 1 - f; L.focus.style.opacity = f;
+  up.forEach(u => u(F));
+});
+</script>

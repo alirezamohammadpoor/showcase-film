@@ -1,0 +1,6 @@
+{ "url": "http://127.0.0.1:8124/example/app/index.html", "device": "phone", "dpr": 4,
+  "steps": [
+    { "shot": "week", "rects": { "week": "#week", "today": ".day.on", "list": "#list", "fab": "#fab", "t2": "#t2" } },
+    { "goto": "/example/app/index.html?s=add" }, { "shot": "add", "rects": { "sheet": "#sheet", "field": "#field", "chips": "#chips", "add": "#add" } },
+    { "goto": "/example/app/index.html?s=focus" }, { "shot": "focus", "rects": { "ring": "#ring", "now": "#now", "pause": "#pause" } }
+  ] }

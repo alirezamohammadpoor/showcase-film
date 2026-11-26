@@ -1,0 +1,44 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>Tempo (sample app for the kit's example film)</title>
+<style>
+ body { margin: 0; font: 400 16px/1.4 Inter, sans-serif; color: #141414; background: #F6F5F1; }
+ .wrap { max-width: 1100px; margin: 0 auto; padding: 58px 20px 40px; }
+ header { display: flex; justify-content: space-between; align-items: center; }
+ h1 { font: 600 30px/1.1 "Inter Display"; letter-spacing: -0.02em; margin: 0; }
+ .sub { color: #8A877F; margin-top: 4px; }
+ .avatar { width: 40px; height: 40px; border-radius: 50%; background: #E2DED3; }
+ .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin: 24px 0; }
+ .day { background: #fff; border-radius: 14px; padding: 10px 0; text-align: center; font-size: 13px; color: #8A877F; }
+ .day b { display: block; font: 600 18px/1.3 "Inter Display"; color: #141414; }
+ .day.on { background: #2D5BFF; color: #CFDAFF; } .day.on b { color: #fff; }
+ .day i { display: block; margin: 4px auto 0; width: 5px; height: 5px; border-radius: 50%; background: #2D5BFF; } .day.on i { background: #fff; }
+ h2 { font: 600 18px/1.2 "Inter Display"; margin: 22px 0 10px; }
+ .task { background: #fff; border-radius: 16px; padding: 14px 16px; margin-bottom: 8px; display: flex; gap: 12px; align-items: center; }
+ .task .c { width: 22px; height: 22px; border-radius: 7px; border: 2px solid #D5D1C6; flex: none; }
+ .task.done .c { background: #2D5BFF; border-color: #2D5BFF; } .task.done .tt { color: #A9A59B; text-decoration: line-through; }
+ .task .tm { margin-left: auto; color: #8A877F; font-size: 14px; }
+ .fab { position: fixed; right: 20px; bottom: 34px; width: 60px; height: 60px; border-radius: 20px; background: #141414; color: #fff; font: 300 34px/58px Inter; text-align: center; }
+ .scrim { position: fixed; inset: 0; background: rgba(20,20,20,.28); }
+ .sheet { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-radius: 26px 26px 0 0; padding: 22px 20px 40px; }
+ .sheet .grab { width: 40px; height: 5px; border-radius: 3px; background: #E2DED3; margin: 0 auto 18px; }
+ .field { border: 2px solid #2D5BFF; border-radius: 14px; padding: 14px; font-size: 18px; }
+ .chips { display: flex; gap: 8px; margin: 14px 0 20px; flex-wrap: wrap; } .chip { background: #F1EFE9; border-radius: 99px; padding: 8px 14px; font-size: 14px; } .chip.on { background: #141414; color: #fff; }
+ .btn { background: #2D5BFF; color: #fff; text-align: center; border-radius: 14px; padding: 15px; font-weight: 600; }
+ .focus { background: #141414; color: #fff; min-height: 100vh; } .focus .wrap { text-align: center; }
+ .ring { width: 250px; height: 250px; border-radius: 50%; margin: 60px auto 26px; border: 10px solid #2B2B2B; border-top-color: #2D5BFF; border-right-color: #2D5BFF; display: flex; align-items: center; justify-content: center; font: 500 54px/1 "Inter Display"; letter-spacing: -0.02em; }
+ .focus .sub { color: #9A9A9A; } .focus .now { font: 600 22px/1.3 "Inter Display"; margin-top: 30px; }
+ .ctl { display: flex; gap: 12px; justify-content: center; margin-top: 34px; } .ctl div { background: #2B2B2B; border-radius: 16px; padding: 14px 22px; } .ctl .p { background: #fff; color: #141414; font-weight: 600; }
+</style>
+<body>
+<script>
+const s = new URLSearchParams(location.search).get('s') || 'week';
+const tasks = [['Review launch copy', '09:30', 1], ['Design sync', '11:00', 1], ['Write the onboarding email', '13:00', 0], ['Pricing page pass', '15:30', 0], ['Gym', '18:00', 0]];
+const week = ['Mon 23', 'Tue 24', 'Wed 25', 'Thu 26', 'Fri 27', 'Sat 28', 'Sun 29'];
+let h = '';
+if (s === 'focus') h = `<div class="focus"><div class="wrap"><div class="sub">Focus mode</div><div class="ring" id="ring">24:18</div><div class="sub">of 45 minutes</div><div class="now" id="now">Write the onboarding email</div><div class="ctl"><div>Skip</div><div class="p" id="pause">Pause</div><div>+5 min</div></div></div></div>`;
+else { h = `<div class="wrap"><header><div><h1>This week</h1><div class="sub">5 tasks today · 2 done</div></div><div class="avatar"></div></header>
+<div class="week" id="week">${week.map((d, i) => `<div class="day${i === 3 ? ' on' : ''}">${d.split(' ')[0]}<b>${d.split(' ')[1]}</b>${i < 5 ? '<i></i>' : ''}</div>`).join('')}</div>
+<h2>Today</h2><div id="list">${tasks.map((t, i) => `<div class="task${t[2] ? ' done' : ''}" id="t${i}"><div class="c"></div><div class="tt">${t[0]}</div><div class="tm">${t[1]}</div></div>`).join('')}</div></div><div class="fab" id="fab">+</div>`;
+ if (s === 'add') h += `<div class="scrim"></div><div class="sheet" id="sheet"><div class="grab"></div><div class="field" id="field">Call the printer about the flyers</div><div class="chips" id="chips"><div class="chip on">Today</div><div class="chip">Tomorrow</div><div class="chip">14:00</div><div class="chip">30 min</div></div><div class="btn" id="add">Add task</div></div>`; }
+document.body.innerHTML = h;
+</script>

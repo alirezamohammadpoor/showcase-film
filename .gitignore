@@ -1,0 +1,9 @@
+# captures, renders and measured brand fonts stay out of git (fonts are for rendering only, never publish them)
+example/img/
+brands/*/fonts/
+brands/*/measurements.json
+out/
+*.mp4
+*-sheet.jpg
+callout-routes.jpg
+node_modules/
