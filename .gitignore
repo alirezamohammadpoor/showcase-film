@@ -7,3 +7,5 @@ out/
 *-sheet.jpg
 callout-routes.jpg
 node_modules/
+# Apple's bezels (tools/get-bezels.sh): Apple's files under Apple's license, never commit them
+bezels/

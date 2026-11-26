@@ -5,6 +5,7 @@
    const K = Film({ frame: '4:5' | '16:9' })     reads window.BRAND (load a brands/<name>/brand.js before this file)
    Layers: K.world (#cam, moved by the camera) holds devices and tap dots; K.ui (#ui, frame pixels) holds labels, rows and callouts.
    Query: ?f=120 holds one frame, ?speed=0.25 slows playback, ?render=1 stops autoplay (the renderer adds it), ?frame=16:9, ?zoom=0 turns every zoom off. */
+const FILM_SRC = document.currentScript ? document.currentScript.src : location.href;   // bezels/ sits next to kit/
 function Film(opts = {}) {
   const q = new URLSearchParams(location.search);
   const FRAMES = { '4:5': { W: 1080, H: 1350, M: 72 }, '16:9': { W: 1920, H: 1080, M: 96 } };
@@ -53,10 +54,11 @@ function Film(opts = {}) {
   let cam = WIDE;
   /* zoom(at, 'gentle' | 'close', { target, hold, dur, z })
      gentle: about 8% from the centre of the frame; the whole device stays in frame (the approved reel push).
-     close:  pushes to target (a world rect, e.g. dev.rect(...)) so it fills about 60% of the frame width; the device may crop.
+     close:  (code look only; with Apple bezels it becomes gentle, the device is never cropped) pushes to target (a world rect, e.g. dev.rect(...)) so it fills about 60% of the frame width; the device may crop.
              focus: { x, y } puts the target's centre at that frame point instead of the centre, to keep a label column free.
      hold:   frames until it pulls back to wide (leave it out to stay until the next zoom). dur: frames per move (default 40, close 48). */
-  function zoom(at, kind, o = {}) { if (!ZOOM || kind === 'none') return; const t = o.target, dur = o.dur ?? (kind === 'close' ? 48 : 40); let to;
+  function zoom(at, kind, o = {}) { if (!ZOOM || kind === 'none') return;
+    if (kind === 'close' && LOOK === 'apple') { console.log('close zoom -> gentle: an Apple device stays whole in frame (Ali, Nov 26, and Apple\'s rules)'); kind = 'gentle'; } const t = o.target, dur = o.dur ?? (kind === 'close' ? 48 : 40); let to;
     if (kind === 'gentle') { const cy = t ? t.y + t.h / 2 : H / 2; to = { x: W / 2, y: H / 2 + Math.max(-14, Math.min(14, (cy - H / 2) * 0.25)), z: o.z ?? 1.08 }; }
     else { const z = o.z ?? Math.min(2.4, W * 0.6 / t.w, H * 0.45 / t.h), f = o.focus || { x: W / 2, y: H / 2 };     // focus: frame point where the target's centre lands
       to = { x: t.x + t.w / 2 - (f.x - W / 2) / z, y: t.y + t.h / 2 - (f.y - H / 2) / z, z }; }
@@ -68,18 +70,31 @@ function Film(opts = {}) {
   const toFrame = p => ({ x: W / 2 + (p.x - cam.x) * cam.z, y: H / 2 + (p.y - cam.y) * cam.z });
 
   /* ---------- devices ---------- */
+  /* Two looks. 'apple' (default): Apple's official bezel PNG (Design Resources; fetch with tools/get-bezels.sh, never commit it) laid over the screen.
+     'code': the black body drawn in CSS (12/14 px rim), the reel's look before Nov 26. ?bezel=code or Film({ bezel: 'code' }) picks it.
+     Apple's art is used as is: no shadow, no tilt, no crop of the device. Phone captures for the Apple phone are 402 wide (iPhone 18 Pro, 402 x 874). */
   const SPECS = { phone: { sw: 390, sh: 844, rim: 12, sr: 62, br: 74 }, laptop: { sw: 1440, sh: 900, rim: 14, sr: 12, br: 24 } };
-  /* device('phone' | 'laptop', { x, y, h | w, screen: [w, h] }) in world px (world = frame when the camera is wide). */
-  function device(kind, o = {}) { const sp = { ...SPECS[kind] }; if (o.screen) [sp.sw, sp.sh] = o.screen;
-    const bw = sp.sw + 2 * sp.rim, bh = sp.sh + 2 * sp.rim, s = o.h ? o.h / bh : o.w ? o.w / bw : 1;
-    const body = el('dev ' + kind, { left: '0px', top: '0px', width: bw + 'px', height: bh + 'px', borderRadius: sp.br + 'px', '--rim': sp.rim + 'px', '--sr': sp.sr + 'px' }, null, world);
-    const screen = el('screen', { left: sp.rim + 'px', top: sp.rim + 'px', width: sp.sw + 'px', height: sp.sh + 'px', borderRadius: sp.sr + 'px' }, null, body);
-    const api = { body, screen, s, w: bw * s, h: bh * s, sw: sp.sw, sh: sp.sh, x: o.x ?? 0, y: o.y ?? 0,
+  const BEZELS = { phone: { src: 'iphone-18-pro-black.png', iw: 1350, ih: 2760, hx: 72, hy: 69, hw: 1206, hh: 2622, sw: 402, sr: 55, br: 62 },        // image px; hole = the screen
+                   laptop: { src: 'macbook-pro-14-space-black.png', iw: 3860, ih: 2540, hx: 418, hy: 288, hw: 3024, hh: 1964, sw: 1440, sr: 10, br: 20 } };
+  const LOOK = q.get('bezel') || opts.bezel || 'apple', BEZEL_DIR = opts.bezelDir || new URL('../bezels/', FILM_SRC).href;
+  /* device('phone' | 'laptop', { x, y, h | w, screen: [w, h], bezel: 'apple' | 'code' }) in world px (world = frame when the camera is wide). */
+  function device(kind, o = {}) { const look = o.bezel || LOOK, bz = look === 'apple' && BEZELS[kind];
+    let sp, bw, bh, ox, oy;
+    if (bz) { const k = bz.hw / bz.sw; sp = { sw: bz.sw, sh: Math.round(bz.hh / k), sr: bz.sr, br: bz.br }; bw = bz.iw / k; bh = bz.ih / k; ox = bz.hx / k; oy = bz.hy / k; }
+    else { sp = { ...SPECS[kind] }; if (o.screen) [sp.sw, sp.sh] = o.screen; bw = sp.sw + 2 * sp.rim; bh = sp.sh + 2 * sp.rim; ox = oy = sp.rim; }
+    const s = o.h ? o.h / bh : o.w ? o.w / bw : 1;
+    const body = el('dev ' + kind + (bz ? ' apple' : ''), { left: '0px', top: '0px', width: bw + 'px', height: bh + 'px', borderRadius: (bz ? 0 : sp.br) + 'px', '--rim': (bz ? 0 : sp.rim) + 'px', '--sr': sp.sr + 'px' }, null, world);
+    const screen = el('screen', { left: ox + 'px', top: oy + 'px', width: sp.sw + 'px', height: sp.sh + 'px', borderRadius: sp.sr + 'px' }, null, body);
+    if (bz) { const img = document.createElement('img'); img.className = 'bezel'; Object.assign(img.style, { left: '0px', top: '0px', width: bw + 'px', height: bh + 'px' });
+      img.onerror = () => { console.log(`missing bezel ${bz.src}: run tools/get-bezels.sh (drawing a plain black body instead)`); img.remove(); body.classList.remove('apple');
+        Object.assign(body.style, { background: 'var(--device)', borderRadius: sp.br * 1.4 + 'px' }); };
+      img.src = BEZEL_DIR + bz.src; body.appendChild(img); }
+    const api = { body, screen, s, w: bw * s, h: bh * s, sw: sp.sw, sh: sp.sh, x: o.x ?? 0, y: o.y ?? 0, look: bz ? 'apple' : 'code',
       place(x, y, sc = api.s) { api.x = x; api.y = y; api.s = sc; body.style.transform = `translate(${x}px,${y}px) scale(${sc})`; },
       /* a still on the screen: full screen width, its own height (h); move it with translateY to scroll, fade with opacity */
       layer(src, lo = {}) { const d = el('layer', { width: sp.sw + 'px', height: (lo.h ?? sp.sh) + 'px', backgroundImage: `url("${src}")`, left: (lo.x ?? 0) + 'px', top: (lo.y ?? 0) + 'px' }, null, screen); if (lo.hidden) d.style.opacity = 0; return d; },
       /* screen px to world px, for callouts, taps and close zooms */
-      point: (sx, sy) => ({ x: api.x + (sp.rim + sx) * api.s, y: api.y + (sp.rim + sy) * api.s }),
+      point: (sx, sy) => ({ x: api.x + (ox + sx) * api.s, y: api.y + (oy + sy) * api.s }),
       rect: r => { const p = api.point(r.x, r.y); return { x: p.x, y: p.y, w: r.w * api.s, h: r.h * api.s }; } };
     api.place(api.x, api.y, s); return api; }
 

@@ -1,18 +1,20 @@
 // Capture a live app as stills for a film: Playwright at 2x to 4x, with the rects of the elements you name saved next to each still.
 // usage: node capture.cjs <capture.json> [outDir]
 // capture.json:
-// { "url": "http://localhost:3000/", "device": "phone" | "laptop" | {"w":390,"h":844}, "dpr": 4, "browser": "chromium" | "webkit",
+// { "url": "http://localhost:3000/", "device": "phone" | "laptop" | {"w":402,"h":874}, "look": "apple" (default) | "code", "dpr": 4, "browser": "chromium" | "webkit",
 //   "storageState": "state.json" (optional, for a signed-in app), "hide": ["#intercom", ".cookie-banner"],
 //   "steps": [ {"goto": "/pricing"}, {"click": "text=Accept"}, {"type": "Skellefteå", "into": "input[type=search]", "delay": 80},
 //              {"scroll": 640} | {"scroll": "#features"}, {"wait": 600}, {"press": "Enter"}, {"eval": "document.body.classList.add('x')"},
 //              {"shot": "list", "full": false, "rects": {"card": ".card:nth-child(2)", "cta": "button.buy"}} ] }
 // Out: <name>.png per shot (viewport, or the whole page with "full": true), and rects.json (+ rects.js = window.RECTS for film pages):
 //   { "<shot>": { "scrollY": 0, "viewport": [w, h], "dpr": 4, "rects": { "<key>": {x, y, w, h} } } }   rects in CSS px of the screen (page px for full shots)
-// Rules: phone = 390 wide, laptop = 1280 or 1440 wide; never an in-between width to fit the frame. Never submit a payment or a booking on production.
+// Screens: Apple look (default) phone 402 x 874 (iPhone 18 Pro), laptop 1440 x 935 (MacBook Pro 14 screen shape); code look phone 390 x 844, laptop 1440 x 900.
+// Rules: never an in-between width to fit the frame. Never submit a payment or a booking on production.
 const fs = require('fs'), path = require('path');
 (async () => { const cfgPath = process.argv[2], cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8')), out = process.argv[3] || path.join(path.dirname(cfgPath), 'img');
   fs.mkdirSync(out, { recursive: true });
-  const vp = cfg.device === 'laptop' ? { width: 1440, height: 900 } : cfg.device && cfg.device.w ? { width: cfg.device.w, height: cfg.device.h } : { width: 390, height: 844 };
+  const apple = (cfg.look || 'apple') === 'apple';
+  const vp = cfg.device === 'laptop' ? { width: 1440, height: apple ? 935 : 900 } : cfg.device && cfg.device.w ? { width: cfg.device.w, height: cfg.device.h } : apple ? { width: 402, height: 874 } : { width: 390, height: 844 };
   const pw = require('playwright'), browser = await pw[cfg.browser || 'chromium'].launch();
   const ctx = await browser.newContext({ viewport: vp, deviceScaleFactor: cfg.dpr || 4, isMobile: false, hasTouch: false, storageState: cfg.storageState, reducedMotion: 'no-preference' });
   const page = await ctx.newPage(); page.on('pageerror', e => console.log('pageerror:', e.message));

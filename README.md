@@ -1,6 +1,6 @@
 # Showcase film kit
 
-Short product films in the style of the internship highlights reel (Nov 2026): one take, morphs instead of cuts, a black phone or laptop window,
+Short product films in the style of the internship highlights reel (Nov 2026): one take, morphs instead of cuts, Apple's black iPhone or MacBook frame (or the older code-drawn black phone and window),
 a headline that rolls per beat, numbered rows with a square that jumps to the current feature, elbow line callouts, and camera zoom only where a
 beat asks for it. Every film is one HTML page that draws any frame from scratch (`window.seek(frame)`, 60 fps), rendered with Playwright at 2x.
 
@@ -12,11 +12,13 @@ The skill that drives it is "showcase-film". This folder holds everything it run
 - `tools/measure-brand.cjs <url> <name>`: measures a product site into `brands/<name>/` (brand.js, fonts/, measurements.json). Its colours are guesses: confirm them.
 - `tools/capture.cjs <capture.json> [outDir]`: captures the live app at 4x with the rects of named elements (`rects.json` + `rects.js`).
 - `tools/render.cjs`: `film` (parallel ranges to r%04d.jpg at 2x), `stills` (beat stills for the storyboard and checks), `serve` (look at a page).
+- `tools/get-bezels.sh`: downloads Apple's official bezels (iPhone 18 Pro Black, MacBook Pro 14" Space Black) from Apple Design Resources into `bezels/`. Run it once per checkout. They are Apple's files: `bezels/` is git-ignored, never commit or publish them.
 - `tools/encode.sh <framesDir> <out.mp4>`: x264 crf 19, faststart, plus a 32-tile frame sheet with frame numbers.
 - `example/`: a worked film (Tempo, a made-up app): `app/`, `capture.json`, `img/`, `beats.md`, `film.html`, `tempo-example.mp4`.
 
 ## Run the example
 ```
+bash tools/get-bezels.sh                                                        # once: Apple's frames into bezels/
 cp -r /mnt/project-files/showcase-film "$SCRATCH/sf" && cd "$SCRATCH/sf"      # render from scratch: the mount is slow and noexec
 node tools/render.cjs serve 8124 &                                              # the capture config points at this server
 node tools/capture.cjs example/capture.json example/img
@@ -24,7 +26,7 @@ node tools/render.cjs stills example/film.html out/stills 100,200,380           
 node tools/render.cjs film example/film.html out/frames --jobs 4                # 450 frames, about 30 s
 bash tools/encode.sh out/frames out/tempo.mp4
 ```
-Page options: `?f=200` holds a frame, `?speed=0.25`, `?frame=16:9`, `?brand=<name>`, `?zoom=0` (all zooms off).
+Page options: `?f=200` holds a frame, `?speed=0.25`, `?frame=16:9`, `?brand=<name>`, `?zoom=0` (all zooms off), `?bezel=code` (the code-drawn device).
 
 ## Callouts route themselves
 Give a callout the feature, not a path: `K.callout({ at, end, dev: phone, feature: R('add').field, layer: L.add, text, sub })` (`R(name)` = the rects from capture.cjs).
@@ -38,7 +40,10 @@ moment, or the device (including where a zoom moves it). `?routes=1` tints what 
 
 ## Geometry
 - 4:5 = 1080 x 1350, margin 72, 12 columns of 56 with 24 gutters. 16:9 = 1920 x 1080, margin 96, columns of 122. `K.col(i)`, `K.span(a, b)`.
-- Phone screen 390 x 844 CSS px, 12 px black rim; laptop window 1440 x 900, 14 px rim. `device(kind, { x, y, h | w })` scales the whole device.
+- Devices are Apple's bezels by default: phone = iPhone 18 Pro Black, screen 402 x 874 CSS px; laptop = MacBook Pro 14" Space Black, screen 1440 x 935. Capture at those sizes (capture.cjs does, `"look": "apple"` is its default).
+- Apple's art is used as is: no shadow, tilt or crop. A `close` zoom becomes `gentle` with Apple bezels, so the whole device always stays in frame.
+- `?bezel=code` or `Film({ bezel: 'code' })` (or `device(kind, { bezel: 'code' })`) draws the older black body instead: phone screen 390 x 844 with a 12 px rim, laptop window 1440 x 900 with a 14 px rim (`"look": "code"` in capture.json). If the bezel PNG is missing, the kit logs it and draws a plain black body.
+- `device(kind, { x, y, h | w })` scales the whole device.
 - `dev.point(sx, sy)` and `dev.rect({x, y, w, h})` turn screen px (as in rects.json) into world px for callouts, taps and zooms.
 - World = frame while the camera is wide. Labels, rows and callouts live in frame px (`K.ui`), devices and taps in the world (`K.world`).
 
